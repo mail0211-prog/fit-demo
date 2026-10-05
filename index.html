@@ -181,8 +181,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 .diag{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,340px);gap:20px;align-items:start}
 @media (max-width:900px){.diag{grid-template-columns:minmax(0,1fr)}}
 .qs{display:flex;flex-direction:column;gap:12px}
-fieldset{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:12px 16px;margin:0;min-width:0}
-legend{font-weight:700;font-size:14px;padding:0 4px}
+fieldset{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:14px 16px;margin:0;min-width:0}
+legend{float:left;width:100%;font-weight:700;font-size:14px;padding:0;margin:0 0 4px}
+legend+*{clear:both}
 legend .qn{font-family:var(--f-mono);color:var(--accent);margin-right:6px}
 .choices{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .choices label{border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:13px;display:flex;gap:6px;align-items:center;cursor:pointer;background:var(--surface-2)}
@@ -191,7 +192,7 @@ legend .qn{font-family:var(--f-mono);color:var(--accent);margin-right:6px}
 .qhint{font-size:12px;color:var(--ink-3);margin-top:6px}
 .result{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
 .typebar{display:grid;grid-template-columns:repeat(5,1fr);gap:3px}
-.typebar div{font-size:10.5px;text-align:center;padding:6px 2px;border-radius:6px;background:var(--surface-2);color:var(--ink-3)}
+.typebar div{font-size:10px;text-align:center;padding:6px 0;word-break:keep-all;letter-spacing:-.02em;border-radius:6px;background:var(--surface-2);color:var(--ink-3)}
 .typebar div.on{background:var(--ink);color:var(--surface);font-weight:700}
 .grades{display:flex;flex-wrap:wrap;gap:4px}
 .grades .off{opacity:.35}
@@ -222,6 +223,7 @@ legend .qn{font-family:var(--f-mono);color:var(--accent);margin-right:6px}
 table.t{width:100%;border-collapse:collapse;font-size:13px}
 table.t th,table.t td{padding:8px 6px;border-top:1px solid var(--line);text-align:left}
 table.t td.n{text-align:right}
+.result table.t td:first-child{white-space:nowrap;word-break:keep-all}
 table.t th{font-size:12px;color:var(--ink-3);font-weight:600;border-top:0}
 .report{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:13px}
 .aitag{font-size:10.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:2px 7px;align-self:flex-start}
