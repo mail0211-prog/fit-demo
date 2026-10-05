@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="FIT: 투자성향 연계형 MTS 개인화 엔진 시연 프로토타입 (가상 데이터)">
+<title>FIT 개인화 MTS 데모</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a working demo — phone MTS on the left, the engine's reasoning on the right, so judges see what changed and why. */
+:root{
+  --bg:#EDF0F2; --surface:#FFFFFF; --surface-2:#F5F7F8; --ink:#15212A; --ink-2:#48565F; --ink-3:#77848C;
+  --line:#D8DEE2; --accent:#0B6B66; --accent-ink:#FFFFFF; --accent-soft:#DDEFEC;
+  --up:#D2352B; --down:#1E5FD2; --warn:#A8670F; --warn-soft:#FBF0DC;
+  --g1:#D2402F; --g2:#DE7A2A; --g3:#C9A21E; --g4:#4F9443; --g5:#3E93BE; --g6:#2D58A8;
+  --shadow:0 1px 2px rgba(21,33,42,.06),0 8px 24px rgba(21,33,42,.06);
+  --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1418; --surface:#161F25; --surface-2:#1C272E; --ink:#E4EBEF; --ink-2:#A8B5BC; --ink-3:#7C8990;
+  --line:#2A3740; --accent:#3DB3A9; --accent-ink:#06201E; --accent-soft:#16332F;
+  --up:#FF6A5E; --down:#6E9EFF; --warn:#E3A84B; --warn-soft:#33270F;
+  --g1:#F0685A; --g2:#F0994E; --g3:#E2C04A; --g4:#76B868; --g5:#68B3DB; --g6:#7E9FE6;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1418; --surface:#161F25; --surface-2:#1C272E; --ink:#E4EBEF; --ink-2:#A8B5BC; --ink-3:#7C8990;
+  --line:#2A3740; --accent:#3DB3A9; --accent-ink:#06201E; --accent-soft:#16332F;
+  --up:#FF6A5E; --down:#6E9EFF; --warn:#E3A84B; --warn-soft:#33270F;
+  --g1:#F0685A; --g2:#F0994E; --g3:#E2C04A; --g4:#76B868; --g5:#68B3DB; --g6:#7E9FE6;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.55;margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px;padding-block:20px 40px;display:flex;flex-direction:column;gap:16px}
+@media (max-width:480px){.wrap{padding-inline:16px}}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.mark{font-weight:700;font-size:28px;letter-spacing:-.02em;line-height:1}
+.mark b{color:var(--accent)}
+.brand p{margin:0;color:var(--ink-2);font-size:14px}
+.demo-pill{font-size:12px;font-weight:600;color:var(--warn);background:var(--warn-soft);border-radius:999px;padding:4px 10px;white-space:nowrap}
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;overflow-x:auto}
+.tabs button{border:0;background:transparent;padding:8px 14px;border-radius:9px;font-weight:600;color:var(--ink-2);white-space:nowrap}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--surface)}
+.tabs .step{font-family:var(--f-mono);font-size:12px;margin-right:6px;opacity:.7}
+
+/* scenario strip */
+.scen{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.scen .lbl{font-size:12px;font-weight:600;color:var(--ink-3);letter-spacing:.04em;margin-right:4px}
+.chipbtn{border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:6px 12px;font-size:13px}
+.chipbtn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--ink);font-weight:600}
+
+/* stage */
+.stage{display:grid;grid-template-columns:minmax(0,388px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.stage{grid-template-columns:minmax(0,1fr)}.phone{margin-inline:auto}}
+
+/* phone */
+.phone{width:100%;max-width:388px;height:760px;background:var(--surface);border:1px solid var(--line);border-radius:30px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;position:relative}
+@media (max-width:480px){.phone{height:680px;border-radius:22px}}
+.status{display:flex;justify-content:space-between;align-items:center;padding:12px 20px 6px;font-size:12px;color:var(--ink-3)}
+.appbar{display:flex;align-items:center;justify-content:space-between;padding:4px 16px 10px;border-bottom:1px solid var(--line)}
+.appbar h2{margin:0;font-size:17px;font-weight:700}
+.appbar .who{font-size:12px;color:var(--ink-2);text-align:right;line-height:1.3}
+.screen{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;background:var(--surface-2)}
+.tabbar{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);background:var(--surface);padding:6px 4px 10px}
+.tabbar button{border:0;background:transparent;font-size:11px;color:var(--ink-3);display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0}
+.tabbar button[aria-current="true"]{color:var(--ink);font-weight:700}
+.tabbar .ico{width:20px;height:20px;border-radius:6px;border:1.5px solid currentColor}
+.tabbar .order .ico{background:var(--accent);border-color:var(--accent)}
+.tabbar .order{color:var(--accent)}
+.lock-note{font-size:10.5px;color:var(--ink-3);text-align:center;padding:0 8px 6px;background:var(--surface)}
+
+.mod{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.mod-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mod-h h3{margin:0;font-size:14px;font-weight:700}
+.mod-h .more{font-size:12px;color:var(--ink-3);border:0;background:none}
+.pinmark{font-size:10.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:1px 6px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line);width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0}
+.row:first-of-type{border-top:0}
+.row .nm{display:flex;flex-direction:column;min-width:0}
+.row .nm b{font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .nm span{font-size:11.5px;color:var(--ink-3)}
+.row .px{text-align:right;font-size:13px}
+.up{color:var(--up)} .down{color:var(--down)}
+.grade{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;border-radius:6px;padding:1px 6px;white-space:nowrap;color:var(--ink)}
+.grade::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--gc)}
+.grade{background:color-mix(in srgb,var(--gc) 16%,transparent)}
+.g1{--gc:var(--g1)}.g2{--gc:var(--g2)}.g3{--gc:var(--g3)}.g4{--gc:var(--g4)}.g5{--gc:var(--g5)}.g6{--gc:var(--g6)}
+.note{font-size:11.5px;color:var(--ink-2);background:var(--surface-2);border-radius:8px;padding:6px 8px}
+.note.warn{color:var(--ink);background:var(--warn-soft)}
+.big{font-size:22px;font-weight:700}
+.alloc{display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px}
+.alloc i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--ink-2)}
+.legend span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;background:var(--c)}
+.glossary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.glossary button{border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:8px;text-align:left;font-size:12px;display:flex;flex-direction:column;gap:2px}
+.glossary b{font-size:13px}
+.ob{display:grid;grid-template-columns:1fr auto 1fr;font-size:12px;gap:2px 8px}
+.ob .s{text-align:right;color:var(--down)} .ob .b{color:var(--up)} .ob .p{text-align:center;font-weight:600}
+.btn{border:0;border-radius:10px;padding:9px 12px;font-weight:600;font-size:13px}
+.btn.pri{background:var(--accent);color:var(--accent-ink)}
+.btn.sec{background:var(--surface-2);border:1px solid var(--line)}
+.btn.ghost{background:transparent;color:var(--ink-2)}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+
+.rec{border:1.5px solid var(--accent);background:var(--accent-soft);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.rec .why{font-size:11.5px;color:var(--ink-2)}
+.rec p{margin:0;font-weight:600;font-size:13.5px}
+.rec .tag{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--accent)}
+.mismatch{border:1.5px solid var(--warn);background:var(--warn-soft);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.mismatch .tag{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--warn)}
+.mismatch p{margin:0;font-size:13px}
+.folded{border:1px dashed var(--line);border-radius:14px;padding:10px 14px;font-size:12.5px;color:var(--ink-2);display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--surface)}
+
+/* detail */
+.back{border:0;background:none;font-size:13px;color:var(--ink-2);padding:0;align-self:flex-start}
+.dhead{display:flex;flex-direction:column;gap:4px}
+.dhead h3{margin:0;font-size:18px}
+.seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.seg button{flex:1;border:0;background:transparent;border-radius:8px;padding:5px 0;font-size:12px;color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12.5px}
+.kv dt{color:var(--ink-3)} .kv dd{margin:0;text-align:right}
+.plain{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:4px;font-size:13px}
+.sheet-wrap{position:absolute;inset:0;background:rgba(10,16,20,.45);display:flex;align-items:flex-end;z-index:5}
+.sheet{background:var(--surface);width:100%;border-radius:20px 20px 0 0;padding:16px;display:flex;flex-direction:column;gap:10px;max-height:88%;overflow-y:auto}
+.sheet h4{margin:0;font-size:15px}
+.fit-line{font-size:12.5px;color:var(--ink-2)}
+.check{display:grid;grid-template-columns:24px 1fr;gap:2px 8px;border:1px solid var(--line);border-radius:12px;padding:10px}
+.check .no{grid-row:span 2;font-weight:700;color:var(--warn)}
+.check b{font-size:13px} .check span{font-size:12px;color:var(--ink-2)}
+.src{font-size:10.5px;color:var(--ink-3)}
+
+/* settings */
+.opt{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line);cursor:pointer}
+.opt:first-of-type{border-top:0}
+.opt input{margin-top:3px;accent-color:var(--accent)}
+.opt b{font-size:13px;display:block}.opt span{font-size:12px;color:var(--ink-2)}
+.toggle{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px}
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px}
+.twocol ul{margin:4px 0 0;padding-left:16px;color:var(--ink-2)}
+
+/* engine panel */
+.panel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card h3{margin:0;font-size:12px;font-weight:700;letter-spacing:.06em;color:var(--ink-3)}
+.card h3 .src-tag{font-weight:600;letter-spacing:0;color:var(--ink-3);margin-left:6px}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.metric{display:flex;flex-direction:column;gap:2px}
+.metric small{font-size:11.5px;color:var(--ink-3)}
+.metric strong{font-size:18px;font-weight:700}
+.shares{display:flex;flex-direction:column;gap:6px}
+.share{display:grid;grid-template-columns:64px 1fr 44px;align-items:center;gap:8px;font-size:12px}
+.share .bar{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden}
+.share .bar i{display:block;height:100%;background:var(--accent);border-radius:0 4px 4px 0}
+.share .v{text-align:right}
+.path{font-size:12px;color:var(--ink-2);background:var(--surface-2);border-radius:8px;padding:8px 10px}
+.path b{color:var(--ink)}
+.sim{display:flex;flex-wrap:wrap;gap:6px}
+.rules{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+.rules li{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:baseline}
+.rules .st{font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 6px;white-space:nowrap}
+.st.on{color:var(--accent);background:var(--accent-soft)} .st.off{color:var(--ink-3);background:var(--surface-2)}
+.payload{font-family:var(--f-mono);font-size:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;overflow-x:auto;white-space:pre;line-height:1.6;color:var(--ink)}
+.payload .c{color:var(--ink-3)}
+.flow-lbl{font-size:12px;font-weight:600;color:var(--ink-2)}
+.log{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:12.5px;max-height:180px;overflow-y:auto}
+.log li{display:grid;grid-template-columns:44px 1fr;gap:8px}
+.log time{color:var(--ink-3);font-family:var(--f-mono);font-size:11.5px}
+.empty{font-size:12.5px;color:var(--ink-3)}
+
+/* diagnosis */
+.diag{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,340px);gap:20px;align-items:start}
+@media (max-width:900px){.diag{grid-template-columns:minmax(0,1fr)}}
+.qs{display:flex;flex-direction:column;gap:12px}
+fieldset{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:14px 16px;margin:0;min-width:0}
+legend{float:left;width:100%;font-weight:700;font-size:14px;padding:0;margin:0 0 4px}
+legend+*{clear:both}
+legend .qn{font-family:var(--f-mono);color:var(--accent);margin-right:6px}
+.choices{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.choices label{border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:13px;display:flex;gap:6px;align-items:center;cursor:pointer;background:var(--surface-2)}
+.choices input{accent-color:var(--accent)}
+.choices label:has(input:checked){border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+.qhint{font-size:12px;color:var(--ink-3);margin-top:6px}
+.result{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+.typebar{display:grid;grid-template-columns:repeat(5,1fr);gap:3px}
+.typebar div{font-size:10px;text-align:center;padding:6px 0;word-break:keep-all;letter-spacing:-.02em;border-radius:6px;background:var(--surface-2);color:var(--ink-3)}
+.typebar div.on{background:var(--ink);color:var(--surface);font-weight:700}
+.grades{display:flex;flex-wrap:wrap;gap:4px}
+.grades .off{opacity:.35}
+
+/* dashboard */
+.dash{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:900px){.dash{grid-template-columns:minmax(0,1fr)}}
+.dash .wide{grid-column:1/-1}
+.card h2{margin:0;font-size:16px}
+.card .sub{margin:0;font-size:12.5px;color:var(--ink-2)}
+.funnels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:700px){.funnels{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.fn{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fn h4{margin:0;font-size:13px}
+.fbar{display:grid;grid-template-columns:36px 1fr 34px;gap:6px;align-items:center;font-size:11.5px;color:var(--ink-2)}
+.fbar .t{height:14px;background:var(--surface-2);border-radius:3px;overflow:hidden}
+.fbar .t i{display:block;height:100%;background:var(--accent);border-radius:0 4px 4px 0}
+.fn.hl h4::after{content:"주문 전환 최저";margin-left:6px;font-size:10.5px;color:var(--warn);background:var(--warn-soft);border-radius:6px;padding:1px 6px}
+.ab{display:flex;flex-direction:column;gap:12px}
+.abrow{display:flex;flex-direction:column;gap:4px}
+.abrow .l{font-size:12.5px;font-weight:600}
+.abbar{display:grid;grid-template-columns:22px 1fr 44px;gap:6px;align-items:center;font-size:11.5px}
+.abbar .t{height:12px;background:var(--surface-2);border-radius:3px;overflow:hidden}
+.abbar .t i{display:block;height:100%;border-radius:0 4px 4px 0}
+.ia{background:var(--ink-3)} .ib{background:var(--accent)}
+.lg{display:flex;gap:14px;font-size:12px;color:var(--ink-2)}
+.lg span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+table.t th,table.t td{padding:8px 6px;border-top:1px solid var(--line);text-align:left}
+table.t td.n{text-align:right}
+.result table.t td:first-child{white-space:nowrap;word-break:keep-all}
+table.t th{font-size:12px;color:var(--ink-3);font-weight:600;border-top:0}
+.report{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.aitag{font-size:10.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:2px 7px;align-self:flex-start}
+footer{font-size:12px;color:var(--ink-3);border-top:1px solid var(--line);padding-top:12px}
+@media (prefers-reduced-motion:no-preference){.mod,.rec,.mismatch{animation:in .25s ease-out both}@keyframes in{from{transform:translateY(4px)}to{transform:none}}}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="mark"><b>FIT</b> 데모</div>
+      <p>투자성향 연계형 MTS 개인화 엔진 · 경진대회 시연 프로토타입</p>
+    </div>
+    <span class="demo-pill">모든 종목·시세·수치는 시연용 가상 데이터</span>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="시연 단계">
+    <button role="tab" id="tab-diag" data-tab="diag"><span class="step">1</span>투자자 진단</button>
+    <button role="tab" id="tab-mts" data-tab="mts"><span class="step">2</span>개인화 MTS</button>
+    <button role="tab" id="tab-dash" data-tab="dash"><span class="step">3</span>증권사 운영 대시보드</button>
+  </nav>
+
+  <section id="view-diag" role="tabpanel" aria-labelledby="tab-diag" hidden></section>
+  <section id="view-mts" role="tabpanel" aria-labelledby="tab-mts" hidden></section>
+  <section id="view-dash" role="tabpanel" aria-labelledby="tab-dash" hidden></section>
+
+  <footer>본 프로토타입은 경진대회 시연용이며, 실제 증권사·종목·시세와 무관한 가상 데이터를 사용합니다. 주문·계좌 연동·본인인증은 구현하지 않았습니다. 간이 진단의 문항과 배점은 공개된 투자자정보확인서 양식을 단순화한 것으로, 실제 기준은 증권사마다 다릅니다.</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+/* ---------- reference data ---------- */
+const TYPES=[
+  {name:"안정형",min:6,range:"6등급"},
+  {name:"안정추구형",min:4,range:"4~6등급"},
+  {name:"위험중립형",min:3,range:"3~6등급"},
+  {name:"적극투자형",min:2,range:"2~6등급"},
+  {name:"공격투자형",min:1,range:"1~6등급"}
+];
+const GRADE_NAME={1:"매우높은위험",2:"높은위험",3:"다소높은위험",4:"보통위험",5:"낮은위험",6:"매우낮은위험"};
+const DEPTH=["요약","표준","상세"];
+const QS=[
+  {id:"q1",t:"현재 소득 상태는 어떤가요?",o:[["일정한 수입이 없음",1],["있지만 앞으로 줄어들 예정",3],["현재 수준 유지 또는 증가 예상",5]]},
+  {id:"q2",t:"총 금융자산 중 투자에 쓰려는 돈의 비중은?",o:[["5% 이하",1],["10% 이하",2],["20% 이하",3],["30% 이하",4],["30% 초과",5]]},
+  {id:"q3",t:"투자해 본 상품 중 가장 위험한 것은?",o:[["없음 · 예금·적금만",1],["채권·채권형 펀드",2],["주식·주식형 펀드 (1년 미만)",3],["주식·주식형 펀드 (1년 이상)",4],["해외주식·ELS·레버리지 ETF (1년 이상)",5]],h:"1년 미만 경험이면 초보용 정보(용어 설명·요약 카드)를 기본으로 보여줍니다."},
+  {id:"q4",t:"투자에서 가장 중요하게 생각하는 것은?",o:[["원금 보존",1],["수익과 안정의 균형",3],["높은 수익",5]]},
+  {id:"q5",t:"감내할 수 있는 손실 수준은?",o:[["원금 손실은 안 됨",1],["10% 이내",3],["20% 이내",4],["원금을 넘는 손실도 감수",5]]},
+  {id:"q6",t:"금융상품에 대한 이해 수준은?",o:[["투자해 본 적 없음",1],["주식과 채권을 구분할 수 있음",2],["대부분의 금융상품을 이해함",3],["파생상품까지 이해함",4]],h:"종목 화면의 기본 정보 깊이(요약·표준·상세)를 정합니다."},
+  {id:"q7",t:"파생상품 투자 경험은?",o:[["없음",0],["1년 미만",0],["1~3년",0],["3년 이상",0]],h:"점수에는 넣지 않고, 레버리지·파생 메뉴의 기본 노출 여부에만 씁니다."}
+];
+const P={
+  hb:{name:"한빛전자",kind:"stock",mkt:"코스피 · 상장주식",g:2,px:71200,chg:1.42,cur:"원",
+      sum:["반도체와 가전을 만드는 국내 대형 제조기업(가상)","최근 1년 주가 범위 58,300~76,900원","배당을 1년에 4번 지급"],
+      std:[["PER","12.4배"],["PBR","1.3배"],["배당수익률","2.1%"],["시가총액","42조 원"]],
+      det:[["외국인 순매수(5일)","+1,240억 원"],["기관 순매수(5일)","−310억 원"],["매출 성장률(전년비)","+8.7%"],["영업이익률","11.2%"]]},
+  nr:{name:"누리바이오",kind:"stock",mkt:"코스닥 · 상장주식",g:2,px:18450,chg:-2.1,cur:"원",
+      sum:["항체 치료제를 개발하는 바이오기업(가상)","임상 결과에 따라 주가 변동이 큼","배당 없음"],
+      std:[["PER","적자"],["PBR","3.8배"],["배당수익률","0%"],["시가총액","1.9조 원"]],
+      det:[["외국인 순매수(5일)","−42억 원"],["기관 순매수(5일)","+18억 원"],["연구개발비 비중","61%"],["현금성 자산","2,840억 원"]]},
+  at:{name:"아틀라스 로보틱스",kind:"fstock",mkt:"미국 나스닥 · 해외주식",g:1,px:184.2,chg:3.85,cur:"달러",
+      sum:["산업용 로봇을 만드는 미국 기업(가상)","달러로 거래되어 환율에 따라 원화 손익이 달라짐","하루 상·하한가 제한이 없음"],
+      std:[["PER","38.2배"],["PBR","7.4배"],["배당수익률","0%"],["원/달러 환율","1,378원"]],
+      det:[["52주 변동성","48%"],["매출 성장률(전년비)","+26%"],["영업이익률","9.8%"],["환전 수수료(가상)","0.25%"]]},
+  lv:{name:"DEMO 반도체 2X 레버리지",kind:"lev",mkt:"파생상품 ETF",g:1,px:9870,chg:6.12,cur:"원",
+      sum:["반도체 지수 하루 수익률의 2배를 따라가는 ETF(가상)","지수가 하루 10% 내리면 약 20% 손실","오래 보유하면 지수 수익률의 2배와 달라질 수 있음"],
+      std:[["기초지수","DEMO 반도체지수"],["추종 배수","일간 2배"],["총보수","연 0.64%"],["순자산","3,210억 원"]],
+      det:[["괴리율","+0.18%"],["추적오차(1년)","1.9%"],["30일 변동성","71%"],["거래대금(일)","1,120억 원"]]},
+  kl:{name:"DEMO 코리아 대형주",kind:"stocketf",mkt:"주식 ETF",g:2,px:35610,chg:0.84,cur:"원",
+      sum:["국내 대형주 200종목에 나눠 투자하는 ETF(가상)","한 종목보다 가격 변동이 작은 편","분기마다 분배금 지급"],
+      std:[["기초지수","DEMO 코리아 200"],["총보수","연 0.05%"],["분배율","1.8%"],["순자산","5.6조 원"]],
+      det:[["괴리율","−0.02%"],["추적오차(1년)","0.3%"],["상위 10종목 비중","49%"],["거래대금(일)","2,340억 원"]]},
+  hy:{name:"DEMO 하이일드 채권",kind:"hy",mkt:"채권 ETF",g:3,px:10235,chg:0.12,cur:"원",
+      sum:["신용등급이 낮은 회사채에 투자하는 ETF(가상)","일반 채권보다 이자가 높고 부도 위험도 높음","매월 분배금 지급"],
+      std:[["평균 신용등급","BB+"],["총보수","연 0.35%"],["분배율","6.2%"],["평균 만기","3.1년"]],
+      det:[["듀레이션","2.7년"],["편입 종목 수","184개"],["괴리율","+0.09%"],["거래대금(일)","38억 원"]]},
+  bd:{name:"DEMO 종합채권",kind:"bondetf",mkt:"채권 ETF",g:4,px:104520,chg:0.05,cur:"원",
+      sum:["국공채와 우량 회사채에 나눠 투자하는 ETF(가상)","금리가 오르면 가격이 내려감","분기마다 분배금 지급"],
+      std:[["평균 신용등급","A+ 이상"],["총보수","연 0.07%"],["분배율","3.1%"],["평균 만기","5.4년"]],
+      det:[["듀레이션","4.9년"],["국공채 비중","62%"],["괴리율","+0.01%"],["거래대금(일)","96억 원"]]},
+  rp:{name:"원화 RP 91일",kind:"rp",mkt:"환매조건부채권",g:6,rate:"연 2.90%",
+      sum:["증권사가 채권을 담보로 약정 수익률을 주는 상품(가상)","91일 뒤 원금과 약정 이자를 받음","예금자보호 대상이 아님"],
+      std:[["약정 수익률","연 2.90%"],["기간","91일"],["최소 가입","10만 원"],["중도해지","약정보다 낮은 이율"]],
+      det:[["담보 채권","국고채·통안채"],["세금","이자소득세 15.4%"],["예금자보호","대상 아님"],["판매 한도","잔여 820억 원"]]}
+};
+const HOT=["lv","at","hb","kl"];
+const WATCH=["hb","kl","lv","at","bd","rp"];
+const CHECKS={
+  fund:["①","투자해도 되는 자금인가요?","학자금·전세금·생활비처럼 꼭 필요한 돈이라면 신중히 생각하세요."],
+  prin:["④","원금이 보장되나요?","이 상품은 원금이 보장되지 않습니다. 원금보장과 '원금보장형'은 다릅니다."],
+  lossLev:["⑤","최대 손실은 얼마인가요?","기초지수가 하루 10% 내리면 약 20% 손실이 납니다. 손실을 감당할 수 있는 규모인지 확인하세요."],
+  lossF:["⑤","얼마나 크게 움직이나요?","미국 주식은 하루 상·하한가 제한이 없어 국내 주식보다 크게 움직일 수 있습니다."],
+  lossHy:["⑤","어떤 경우 손실이 나나요?","편입 회사채의 발행사가 부도나면 원금 손실이 날 수 있습니다."],
+  feeLev:["⑥","수수료와 보수는요?","총보수 연 0.64%(가상)와 매매 수수료가 붙습니다. 오래 보유할수록 비용이 쌓입니다."],
+  feeF:["⑥","수수료와 환전 비용은요?","매매 수수료와 환전 수수료가 붙고, 환율에 따라 원화 기준 손익이 달라집니다."],
+  dep:["③","예금자보호 대상인가요?","RP는 예금자보호 대상이 아닙니다."]
+};
+const KIND_CHECKS={lev:["fund","lossLev","feeLev"],fstock:["fund","lossF","feeF"],stock:["fund","prin"],stocketf:["fund","prin"],hy:["prin","lossHy"],bondetf:["prin"],rp:["dep"]};
+const MODS={
+  assets:{t:"내 자산",cat:"asset"},watch:{t:"관심종목",cat:"info"},hot:{t:"급상승 종목",cat:"info"},
+  brief:{t:"AI 시황 브리핑",cat:"info"},news:{t:"관심 기업 뉴스",cat:"info"},orderbook:{t:"호가·빠른 주문",cat:"trade"},
+  accum:{t:"적립식 현황",cat:"asset"},dividend:{t:"배당·연금",cat:"asset"},guide:{t:"투자 용어 가이드",cat:"learn"},basics:{t:"투자 기초 콘텐츠",cat:"learn"}
+};
+const DEFAULT_ORDER=["assets","watch","hot","brief","news","orderbook","accum","dividend","guide","basics"];
+const USAGE_TYPES={
+  beginner:{name:"입문형",target:["guide","basics","watch","brief"],why:"최근 2주간 용어·투자 기초 콘텐츠를 가장 많이 보셨어요."},
+  explorer:{name:"탐색형",target:["watch","news","brief","assets"],why:"최근 2주간 기업정보·뉴스 조회가 가장 많았어요."},
+  saver:{name:"적립형",target:["assets","accum","dividend","watch"],why:"최근 2주간 자산·적립 화면을 가장 자주 여셨어요."},
+  trader:{name:"매매형",target:["orderbook","hot","news","watch"],why:"최근 2주간 호가·차트·주문 화면 이용이 가장 많았어요."}
+};
+const USAGE_PRESETS={
+  beginner:{info:6,asset:4,trade:2,learn:14,sessions:5},
+  explorer:{info:38,asset:8,trade:6,learn:4,sessions:22},
+  saver:{info:5,asset:24,trade:3,learn:2,sessions:8},
+  trader:{info:12,asset:6,trade:46,learn:0,sessions:41}
+};
+const SCEN={
+  A:{label:"A · 입문 + 안정추구형",ans:{q1:1,q2:0,q3:2,q4:1,q5:1,q6:1,q7:0},usage:"beginner",views:0},
+  B:{label:"B · 탐색형 + 위험중립형",ans:{q1:2,q2:1,q3:3,q4:1,q5:1,q6:2,q7:0},usage:"explorer",views:0},
+  C:{label:"C · 매매형 + 안정추구형",ans:{q1:1,q2:0,q3:3,q4:0,q5:0,q6:2,q7:0},usage:"trader",views:0},
+  D:{label:"D · 괴리 재현 (안정형 + 레버리지 ETF 반복 조회)",ans:{q1:0,q2:0,q3:0,q4:0,q5:0,q6:0,q7:0},usage:"explorer",views:3}
+};
+
+/* ---------- state ---------- */
+const S={tab:"mts",scen:"A",ans:{},usage:{},level:2,pinned:[],snoozed:[],collapsed:false,views:{},
+  mismatchOff:false,screen:"home",detail:null,sheet:null,acked:{},alertsManual:null,depthPick:{},log:[],clock:0};
+function loadScenario(k){
+  const s=SCEN[k];S.scen=k;S.ans=Object.assign({},s.ans);S.usage=Object.assign({},USAGE_PRESETS[s.usage]);
+  S.pinned=[];S.snoozed=[];S.collapsed=false;S.views={};if(s.views)S.views.lv=s.views;S.mismatchOff=false;
+  S.screen="home";S.detail=null;S.sheet=null;S.acked={};S.depthPick={};S.log=[];S.clock=0;S.alertsManual=null;
+  note("시나리오 "+s.label.split(" · ")[0]+" 불러옴");
+}
+function note(msg){S.clock++;const t="+"+String(S.clock).padStart(2,"0");S.log.unshift([t,msg]);if(S.log.length>30)S.log.pop()}
+
+/* ---------- engine ---------- */
+function score(){let s=0;["q1","q2","q3","q4","q5","q6"].forEach(q=>{const opt=QS.find(x=>x.id===q).o[S.ans[q]];s+=opt?opt[1]:0});return s}
+function typeIdx(){const s=score();return s<=10?0:s<=15?1:s<=20?2:s<=25?3:4}
+function depthDefault(){const v=QS[5].o[S.ans.q6][1];return v<=2?0:v===3?1:2}
+function beginner(){return S.ans.q3<=2}
+function derivExp(){return S.ans.q7>=2}
+function eventsTotal(){const u=S.usage;return u.info+u.asset+u.trade+u.learn}
+function shares(){const t=Math.max(1,eventsTotal()),u=S.usage;return{info:u.info/t,asset:u.asset/t,trade:u.trade/t,learn:u.learn/t}}
+function classify(){
+  const sh=shares(),u=S.usage,pct=x=>Math.round(x*100)+"%";
+  if(u.sessions<8&&sh.learn>=.3)return{key:"beginner",path:"접속 "+u.sessions+"회(8회 미만) → 학습 비중 "+pct(sh.learn)+"(30% 이상)"};
+  if(sh.trade>=.45)return{key:"trader",path:"학습 조건 불충족 → 매매 비중 "+pct(sh.trade)+"(45% 이상)"};
+  if(sh.asset>=.4)return{key:"saver",path:"매매 비중 "+pct(sh.trade)+" → 자산 비중 "+pct(sh.asset)+"(40% 이상)"};
+  if(sh.info>=.4)return{key:"explorer",path:"자산 비중 "+pct(sh.asset)+" → 정보 비중 "+pct(sh.info)+"(40% 이상)"};
+  return{key:"beginner",path:"뚜렷한 패턴 없음 → 기본값 입문형"};
+}
+function alertsOn(){return S.alertsManual!=null?S.alertsManual:typeIdx()>1}
+function minGrade(){return TYPES[typeIdx()].min}
+function outOfRange(id){return S.level>=1&&P[id].g<minGrade()}
+function baseOrder(){
+  if(S.level===0)return DEFAULT_ORDER.slice();
+  const o=DEFAULT_ORDER.slice();
+  if(beginner()){o.splice(o.indexOf("guide"),1);o.splice(1,0,"guide")}
+  if(!derivExp()&&typeIdx()<=1){/* keep orderbook but after holdings */}
+  return o;
+}
+function homeOrder(){
+  const base=baseOrder();if(S.level<2)return{shown:base,folded:[]};
+  const ordered=[...S.pinned,...base.filter(m=>!S.pinned.includes(m))];
+  if(!S.collapsed)return{shown:ordered,folded:[]};
+  const keep=new Set([...S.pinned,...USAGE_TYPES[classify().key].target]);
+  return{shown:ordered.filter(m=>keep.has(m)),folded:ordered.filter(m=>!keep.has(m))};
+}
+function pendingRecs(){
+  if(S.level<2)return[];
+  const ut=USAGE_TYPES[classify().key],recs=[];
+  const top=homeOrder().shown.slice(0,S.pinned.length+2);
+  ut.target.forEach(m=>{if(!S.pinned.includes(m)&&!S.snoozed.includes("pin:"+m)&&(recs.length<2))recs.push({kind:"pin",m:m,why:ut.why})});
+  if(!S.collapsed&&!S.snoozed.includes("fold")&&S.pinned.length>=1){
+    const n=baseOrder().filter(m=>!S.pinned.includes(m)&&!ut.target.includes(m)).length;
+    if(n>0)recs.push({kind:"fold",n:n,why:"최근 2주간 거의 열지 않은 메뉴가 "+n+"개 있어요."});
+  }
+  return S.level===3?recs:recs.slice(0,1);
+}
+function mismatch(){
+  if(S.level<1||S.mismatchOff)return null;
+  const ti=typeIdx();if(ti>2)return null;
+  const n=Object.keys(S.views).filter(id=>P[id].g===1).reduce((a,id)=>a+S.views[id],0);
+  return n>=3?n:null;
+}
+function bump(cat){S.usage[cat]++}
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt=n=>n.toLocaleString("ko-KR");
+function gradeChip(g){return '<span class="grade g'+g+'">'+g+'등급</span>'}
+function pxCell(id){const p=P[id];if(p.rate)return '<div class="px"><div class="num">'+p.rate+'</div><div class="num" style="font-size:11.5px;color:var(--ink-3)">약정</div></div>';
+  const cls=p.chg>=0?"up":"down",sign=p.chg>=0?"+":"";
+  const price=p.cur==="달러"?"$"+p.px.toFixed(2):fmt(p.px);
+  return '<div class="px"><div class="num">'+price+'</div><div class="num '+cls+'" style="font-size:11.5px">'+sign+p.chg.toFixed(2)+'%</div></div>'}
+function prodRow(id,extra){const p=P[id];return '<button class="row" data-act="open" data-id="'+id+'"><div class="nm"><b>'+esc(p.name)+'</b><span>'+esc(p.mkt)+' '+gradeChip(p.g)+(extra||"")+'</span></div>'+pxCell(id)+'</button>'}
+
+/* ---------- MTS modules ---------- */
+function modHtml(m,pinned){
+  const d=S.level===0?1:depthDefault();
+  const head=(t)=>'<div class="mod-h"><h3>'+t+(pinned?' <span class="pinmark">내가 고정</span>':'')+'</h3></div>';
+  const tap=' data-act="tap" data-cat="'+MODS[m].cat+'"';
+  switch(m){
+  case"assets":return '<div class="mod"'+tap+'>'+head("내 자산")+'<div><div class="big num">12,480,000원</div><div class="num up" style="font-size:12.5px">+387,200원 (+3.20%)</div></div><div class="alloc" aria-hidden="true"><i style="width:46%;background:var(--g2)"></i><i style="width:18%;background:var(--g1)"></i><i style="width:21%;background:var(--g4)"></i><i style="width:15%;background:var(--g6)"></i></div><div class="legend"><span style="--c:var(--g2)">국내주식 46%</span><span style="--c:var(--g1)">해외주식 18%</span><span style="--c:var(--g4)">채권 ETF 21%</span><span style="--c:var(--g6)">RP 15%</span></div></div>';
+  case"watch":return '<div class="mod">'+head("관심종목")+WATCH.map(id=>prodRow(id)).join("")+'</div>';
+  case"hot":{
+    const ti=typeIdx();let list=HOT.slice(),hidden=[];let msg="";
+    if(S.level>=1&&ti<=1){hidden=list.filter(id=>P[id].g<minGrade());list=list.filter(id=>P[id].g>=minGrade())}
+    if(S.level>=1&&hidden.length)msg='<div class="note warn">투자성향('+TYPES[ti].name+') 적합 범위 밖 상품 '+hidden.length+'개는 급상승 목록에서 뺐어요. 설정에서 바꿀 수 있어요.</div>';
+    if(S.level>=1&&ti===2)msg='<div class="note">1~2등급 상품은 요약 정보와 함께 보여드려요.</div>';
+    if(S.level>=1&&!alertsOn())msg+='<div class="note">급등 알림(레버리지 ETF 등 적합 범위 밖 상품): 꺼짐'+(S.alertsManual==null?' · 투자성향 기본값':'')+'</div>';
+    return '<div class="mod">'+head("급상승 종목")+(list.length?list.map(id=>prodRow(id)).join(""):'<div class="empty">적합 범위 안에서 급상승한 종목이 없어요.</div>')+msg+'</div>';}
+  case"brief":{
+    const L=[["오늘 코스피는 조금 올랐어요(+0.6%).","반도체 회사들의 주가가 오른 영향이 컸어요."],
+      ["코스피 2,948.3(+0.6%), 코스닥 861.2(−0.3%).","외국인 순매수 2,140억 원, 원/달러 1,378원."],
+      ["필라델피아 반도체지수 +2.3% 영향으로 대형 반도체주 강세.","미 10년물 금리 4.12%(−5bp), 달러인덱스 103.4로 원화 강세 전환."]];
+    let out=[];for(let i=0;i<=d;i++)out=out.concat(L[i]);
+    return '<div class="mod"'+tap+'>'+head("AI 시황 브리핑")+'<ul class="plain">'+out.map(x=>'<li>'+x+'</li>').join("")+'</ul><div class="src">정보 깊이: '+DEPTH[d]+' · AI 요약(가상 시황)</div></div>';}
+  case"news":return '<div class="mod"'+tap+'>'+head("관심 기업 뉴스")+'<ul class="plain"><li>한빛전자, 차세대 메모리 양산 일정 앞당겨(가상)</li><li>DEMO 코리아 대형주 ETF, 분배금 주당 160원 확정(가상)</li><li>아틀라스 로보틱스, 3분기 매출 전망 상향(가상)</li></ul></div>';
+  case"orderbook":return '<div class="mod">'+head("호가·빠른 주문")+'<div style="font-size:12px;color:var(--ink-2)">한빛전자 · 10호가 중 5호가</div><div class="ob num"><span class="s">12,480</span><span class="p">71,400</span><span></span><span class="s">9,120</span><span class="p">71,300</span><span></span><span class="s">15,760</span><span class="p up">71,200</span><span class="b"></span><span></span><span class="p">71,100</span><span class="b">18,340</span><span></span><span class="p">71,000</span><span class="b">22,910</span></div><div class="btns"><button class="btn pri" data-act="tap" data-cat="trade">빠른 주문 열기</button><button class="btn sec" data-act="tap" data-cat="trade">차트 보기</button></div><div class="src">시연용: 주문은 실행되지 않고 이용 신호만 기록돼요.</div></div>';
+  case"accum":return '<div class="mod"'+tap+'>'+head("적립식 현황")+'<div class="kv"><dt>DEMO 코리아 대형주</dt><dd class="num">매월 200,000원</dd><dt>누적 매수</dt><dd class="num">14회 · 2,800,000원</dd><dt>다음 매수일</dt><dd class="num">10월 5일</dd></div></div>';
+  case"dividend":return '<div class="mod"'+tap+'>'+head("배당·연금")+'<div class="kv"><dt>한빛전자 배당 예정</dt><dd class="num">주당 361원 · 10월 15일</dd><dt>연금저축 계좌</dt><dd class="num">3,200,000원</dd></div></div>';
+  case"guide":return '<div class="mod">'+head("투자 용어 가이드")+'<div class="glossary"><button data-act="tap" data-cat="learn"><b>PER</b>이익 대비 주가가 몇 배인지</button><button data-act="tap" data-cat="learn"><b>ETF</b>여러 종목을 묶어 주식처럼 사고파는 상품</button><button data-act="tap" data-cat="learn"><b>예수금</b>주문에 쓸 수 있는 현금</button></div></div>';
+  case"basics":return '<div class="mod"'+tap+'>'+head("투자 기초 콘텐츠")+'<ul class="plain"><li>처음 주식을 사기 전 확인할 3가지</li><li>분산투자는 왜 필요할까</li><li>시장가 주문과 지정가 주문의 차이</li></ul></div>';
+  }return"";
+}
+function recHtml(r){
+  if(r.kind==="pin")return '<div class="rec" role="group" aria-label="개인화 추천"><span class="tag">FIT 추천 · 승인해야 바뀌어요</span><p>\''+MODS[r.m].t+'\' 카드를 홈 상단에 둘까요?</p><span class="why">'+r.why+'</span><div class="btns"><button class="btn pri" data-act="approve" data-m="'+r.m+'">추가</button><button class="btn ghost" data-act="decline" data-m="'+r.m+'">괜찮아요</button></div></div>';
+  return '<div class="rec" role="group" aria-label="개인화 추천"><span class="tag">FIT 추천 · 승인해야 바뀌어요</span><p>자주 쓰지 않는 메뉴 '+r.n+'개를 \'더보기\'로 접을까요?</p><span class="why">'+r.why+' 접어도 언제든 다시 펼칠 수 있어요.</span><div class="btns"><button class="btn pri" data-act="fold">접기</button><button class="btn ghost" data-act="nofold">괜찮아요</button></div></div>';
+}
+function homeHtml(){
+  let h="";const mm=mismatch();
+  if(mm)h+='<div class="mismatch" role="group" aria-label="투자성향 재진단 안내"><span class="tag">투자성향 재진단 안내</span><p>최근 매우높은위험(1등급) 상품을 '+mm+'번 살펴보셨어요. 현재 투자성향은 '+TYPES[typeIdx()].name+'('+TYPES[typeIdx()].range+')이에요. 투자 경험이나 목표가 바뀌었다면 다시 진단해 보세요.</p><div class="btns"><button class="btn pri" data-act="rediag">다시 진단하기</button><button class="btn ghost" data-act="nomm">괜찮아요</button></div><span class="src">매매를 막지 않아요. 진단 결과와 이용 행동이 어긋날 때만 안내해요.</span></div>';
+  pendingRecs().forEach(r=>h+=recHtml(r));
+  const o=homeOrder();
+  o.shown.forEach(m=>h+=modHtml(m,S.pinned.includes(m)));
+  if(o.folded.length)h+='<div class="folded"><span>더보기에 접힌 메뉴 '+o.folded.length+'개 · '+o.folded.map(m=>MODS[m].t).join(", ")+'</span><button class="btn sec" data-act="unfold">펼치기</button></div>';
+  return h;
+}
+function detailHtml(){
+  const id=S.detail,p=P[id],d=S.depthPick[id]!=null?S.depthPick[id]:(S.level===0?1:depthDefault());
+  let h='<button class="back" data-act="home">← 홈</button><div class="dhead"><span style="font-size:12px;color:var(--ink-3)">'+esc(p.mkt)+' '+gradeChip(p.g)+' '+GRADE_NAME[p.g]+'</span><h3>'+esc(p.name)+'</h3>'+(p.rate?'<div class="big num">'+p.rate+'</div>':'<div><span class="big num">'+(p.cur==="달러"?"$"+p.px.toFixed(2):fmt(p.px)+"원")+'</span> <span class="num '+(p.chg>=0?"up":"down")+'">'+(p.chg>=0?"+":"")+p.chg.toFixed(2)+'%</span></div>')+'</div>';
+  if(outOfRange(id))h+='<div class="note warn">'+TYPES[typeIdx()].name+'의 적합 위험등급은 '+TYPES[typeIdx()].range+'이에요. 이 상품은 '+p.g+'등급이에요. 매매는 그대로 가능해요.</div>';
+  h+='<div class="seg" role="group" aria-label="정보 깊이">'+DEPTH.map((x,i)=>'<button data-act="depth" data-d="'+i+'" aria-pressed="'+(i===d)+'">'+x+'</button>').join("")+'</div>';
+  h+='<div class="mod"><div class="mod-h"><h3>한눈에 보기</h3></div><ul class="plain">'+p.sum.map(x=>'<li>'+x+'</li>').join("")+'</ul></div>';
+  if(d>=1)h+='<div class="mod"><div class="mod-h"><h3>주요 지표</h3></div><dl class="kv">'+p.std.map(x=>'<dt>'+x[0]+'</dt><dd class="num">'+x[1]+'</dd>').join("")+'</dl></div>';
+  if(d>=2)h+='<div class="mod"><div class="mod-h"><h3>상세 데이터</h3></div><dl class="kv">'+p.det.map(x=>'<dt>'+x[0]+'</dt><dd class="num">'+x[1]+'</dd>').join("")+'</dl></div>';
+  h+='<div class="src">기본 깊이는 투자자정보확인서의 금융지식 문항으로 정해지고, 위 버튼으로 언제든 바꿀 수 있어요. (가상 데이터)</div>';
+  return h;
+}
+function sheetHtml(){
+  const id=S.sheet,p=P[id],ti=typeIdx();
+  let keys=KIND_CHECKS[p.kind]||[];let title="상품 이해 확인";let line="";
+  if(ti<=1){line=TYPES[ti].name+'의 적합 위험등급('+TYPES[ti].range+')을 벗어난 '+p.g+'등급('+GRADE_NAME[p.g]+') 상품이에요. 매매는 가능하지만 아래 내용을 먼저 확인해 주세요.'}
+  else if(ti===2){line='1~2등급 상품이라 핵심 위험만 요약해 드려요.';keys=keys.slice(0,2)}
+  else{title="위험 요약";line='1등급 상품의 핵심 위험이에요.';keys=keys.filter(k=>k.indexOf("loss")===0).slice(0,1);if(!keys.length)keys=[(KIND_CHECKS[p.kind]||["prin"]).slice(-1)[0]]}
+  return '<div class="sheet-wrap"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t"><h4 id="sh-t">'+title+' · '+esc(p.name)+' '+gradeChip(p.g)+'</h4><div class="fit-line">'+line+'</div>'+keys.map(k=>{const c=CHECKS[k];return '<div class="check"><span class="no">'+c[0]+'</span><b>'+c[1]+'</b><span>'+c[2]+'</span></div>'}).join("")+'<div class="src">번호는 창구에서 쓰는 투자상품 자가진단표 9개 항목의 순서예요. 이 상품에 해당하는 항목만 골라 보여줘요.</div><button class="btn pri" data-act="ack">확인하고 보기</button></div></div>';
+}
+function settingsHtml(){
+  const L=[["사용 안 함","기본 화면을 그대로 써요."],["투자성향만","투자자정보확인서 결과로 정보 깊이와 가드레일만 적용해요."],["이용 패턴 포함","기기 안에서 집계한 이용 유형으로 배치를 추천해요. (기본)"],["적극 추천","추천을 한 번에 더 많이 보여줘요. 적용은 항상 승인 후예요."]];
+  return '<div class="mod"><div class="mod-h"><h3>개인화 수준</h3></div><div role="radiogroup" aria-label="개인화 수준">'+L.map((x,i)=>'<label class="opt"><input type="radio" name="lvl" id="lvl-'+i+'" value="'+i+'" '+(S.level===i?"checked":"")+'><div><b>'+x[0]+'</b><span>'+x[1]+'</span></div></label>').join("")+'</div></div>'+
+  '<div class="mod"><div class="toggle"><span>급등 알림 (적합 범위 밖 상품)</span><input type="checkbox" id="alerts" '+(alertsOn()?"checked":"")+' aria-label="급등 알림"></div><div class="src">투자성향이 안정형·안정추구형이면 기본값은 꺼짐이에요. 켜면 그대로 받아요.</div></div>'+
+  '<div class="mod"><div class="mod-h"><h3>개인화에 쓰는 정보</h3></div><div class="twocol"><div><b>쓰는 정보</b><ul><li>투자성향 유형</li><li>금융지식 수준</li><li>기능별 이용 비중</li></ul></div><div><b>쓰지 않는 정보</b><ul><li>매매 금액·보유 종목</li><li>위치·기기 정보</li><li>다른 앱 활동</li></ul></div></div></div>'+
+  '<button class="btn sec" data-act="rediag">투자성향 다시 진단하기</button>';
+}
+function phoneHtml(){
+  const ti=typeIdx(),ut=S.level>=2?USAGE_TYPES[classify().key].name:"—";
+  let body=S.screen==="detail"?detailHtml():S.screen==="settings"?settingsHtml():homeHtml();
+  const tb=[["home","홈",""],["watch","관심","info"],["order","주문","trade"],["assets","자산","asset"],["settings","설정",""]];
+  return '<div class="phone" aria-label="개인화 MTS 화면"><div class="status"><span class="num">9:41</span><span>DEMO 증권</span></div><div class="appbar"><h2>'+(S.screen==="settings"?"설정":S.screen==="detail"?"종목 정보":"홈")+'</h2><div class="who">'+(S.level===0?"개인화 꺼짐":TYPES[ti].name+(S.level>=2?" · "+ut:""))+'<br><span style="color:var(--ink-3)">개인화 '+["사용 안 함","투자성향만","이용 패턴 포함","적극 추천"][S.level]+'</span></div></div><div class="screen" id="screen">'+body+'</div><div class="tabbar">'+tb.map(t=>'<button class="'+t[0]+'" data-act="tab-'+t[0]+'" data-cat="'+t[2]+'" aria-current="'+((S.screen===t[0])||(t[0]==="home"&&S.screen==="home")?"true":"false")+'"><span class="ico"></span>'+t[1]+'</button>').join("")+'</div><div class="lock-note">하단 메뉴와 주문 버튼은 어떤 설정에서도 위치가 바뀌지 않아요.</div>'+(S.sheet?sheetHtml():"")+'</div>';
+}
+
+/* ---------- engine panel ---------- */
+function panelHtml(){
+  const ti=typeIdx(),sc=score(),sh=shares(),cl=classify(),ut=USAGE_TYPES[cl.key];
+  const mg=minGrade();
+  const grades=[1,2,3,4,5,6].map(g=>'<span class="grade g'+g+(g<mg?' off':'')+'">'+g+'등급</span>').join("");
+  const rules=[
+    [S.level>=1,"정보 깊이 기본값 '"+DEPTH[depthDefault()]+"' (금융지식 문항)"],
+    [S.level>=1&&beginner(),"투자경험 1년 미만 → 용어 가이드를 홈 두 번째에 배치"],
+    [S.level>=1&&ti<=1,"적합 범위 밖("+(mg-1>=1?"1~"+(mg-1)+"등급":"없음")+") 상품은 급상승 목록에서 제외"],
+    [S.level>=1&&ti<=1,"적합 범위 밖 상품 급등 알림 기본 꺼짐"+(S.alertsManual!=null?" (사용자가 직접 변경)":"")],
+    [S.level>=1&&ti<=3,"적합 범위 밖 상품 진입 시 상품 이해 확인 카드"],
+    [S.level>=1&&ti<=2,"진단–행동 괴리 탐지 (1등급 상품 3회 이상 조회 시 재진단 안내)"],
+    [true,"주문 버튼·하단 메뉴 위치 고정"]
+  ];
+  const pl='<span class="c">// 증권사 서버 → FIT 엔진 (유형 코드만)</span>\n{ "risk_profile": "T'+(ti+1)+'",  <span class="c">// '+TYPES[ti].name+'</span>\n  "knowledge": "L'+(depthDefault()+1)+'", "novice": '+beginner()+', "deriv_exp": '+derivExp()+' }\n\n<span class="c">// 사용자 기기 → FIT 엔진 (집계값만)</span>\n'+(S.level>=2?'{ "usage_type": "'+cl.key+'",\n  "share": { "info": '+sh.info.toFixed(2)+', "asset": '+sh.asset.toFixed(2)+', "trade": '+sh.trade.toFixed(2)+', "learn": '+sh.learn.toFixed(2)+' } }':'<span class="c">전송 없음 (개인화 수준 2단계 미만)</span>')+'\n\n<span class="c">// 기기 안에만 보관: 원시 이용 이벤트 '+eventsTotal()+'건, 접속 '+S.usage.sessions+'회</span>';
+  return '<div class="panel">'+
+  '<div class="card"><h3>① 투자성향 <span class="src-tag">투자자정보확인서 · 증권사 보유 데이터</span></h3><div class="pair"><div class="metric"><small>투자성향 (간이 점수 '+sc+'/29)</small><strong>'+TYPES[ti].name+'</strong></div><div class="metric"><small>적합 상품 위험등급</small><div class="grades">'+grades+'</div></div></div></div>'+
+  '<div class="card"><h3>② 이용 유형 <span class="src-tag">기기 안에서 집계</span></h3>'+(S.level<2?'<div class="empty">개인화 수준이 \'이용 패턴 포함\' 이상일 때 이용 유형을 판정해요.</div>':
+    '<div class="shares">'+[["정보 조회","info"],["자산 확인","asset"],["매매","trade"],["학습","learn"]].map(x=>'<div class="share"><span>'+x[0]+'</span><div class="bar" title="'+x[0]+' '+Math.round(sh[x[1]]*100)+'%"><i style="width:'+(sh[x[1]]*100).toFixed(1)+'%"></i></div><span class="v num">'+Math.round(sh[x[1]]*100)+'%</span></div>').join("")+'</div><div class="path">판정: <b>'+ut.name+'</b> · '+cl.path+'</div>')+
+    '<div class="flow-lbl">이용 행동 시뮬레이션 (2주치)</div><div class="sim">'+Object.keys(USAGE_PRESETS).map(k=>'<button class="chipbtn" data-act="usage" data-u="'+k+'">'+USAGE_TYPES[k].name+'</button>').join("")+'</div><div class="src">폰 화면의 카드를 누를 때마다 해당 이용 신호가 1건씩 쌓여요.</div></div>'+
+  '<div class="card"><h3>③ 가드레일 · 화면 규칙</h3><ul class="rules">'+rules.map(r=>'<li><span class="st '+(r[0]?"on":"off")+'">'+(r[0]?"적용":"대기")+'</span><span>'+r[1]+'</span></li>').join("")+'</ul></div>'+
+  '<div class="card"><h3>④ 엔진으로 전송되는 데이터</h3><div class="payload">'+pl+'</div></div>'+
+  '<div class="card"><h3>⑤ 추천·승인 기록</h3>'+(S.log.length?'<ul class="log">'+S.log.map(l=>'<li><time>'+l[0]+'</time><span>'+esc(l[1])+'</span></li>').join("")+'</ul>':'<div class="empty">아직 기록이 없어요.</div>')+'</div>'+
+  '</div>';
+}
+function mtsHtml(){
+  return '<div class="scen" role="group" aria-label="빠른 시나리오"><span class="lbl">빠른 시나리오</span>'+Object.keys(SCEN).map(k=>'<button class="chipbtn" data-act="scen" data-s="'+k+'" aria-pressed="'+(S.scen===k)+'">'+SCEN[k].label+'</button>').join("")+'</div><div class="stage" style="margin-top:16px">'+phoneHtml()+panelHtml()+'</div>';
+}
+
+/* ---------- diagnosis ---------- */
+function diagHtml(){
+  const ti=typeIdx(),sc=score(),mg=minGrade();
+  const qs=QS.map((q,qi)=>'<fieldset><legend><span class="qn">Q'+(qi+1)+'</span>'+q.t+'</legend><div class="choices">'+q.o.map((o,oi)=>'<label><input type="radio" name="'+q.id+'" id="'+q.id+'-'+oi+'" value="'+oi+'" '+(S.ans[q.id]===oi?"checked":"")+'>'+o[0]+'</label>').join("")+'</div>'+(q.h?'<div class="qhint">'+q.h+'</div>':'')+'</fieldset>').join("");
+  const uses=[
+    ["투자성향",TYPES[ti].name+" → 적합 위험등급 "+TYPES[ti].range+" 밖 상품에 가드레일 적용"],
+    ["투자경험",beginner()?"1년 미만 → 용어 가이드·요약 카드 기본 노출":"1년 이상 → 표준 배치"],
+    ["금융지식","종목 화면 기본 깊이 '"+DEPTH[depthDefault()]+"'"],
+    ["파생 경험",derivExp()?"1년 이상 → 레버리지·파생 메뉴 기본 노출":"1년 미만 → 레버리지·파생 메뉴는 검색으로만"]
+  ];
+  return '<div class="diag"><div class="qs"><div class="card"><h2>간이 투자자정보확인서</h2><p class="sub">증권사가 계좌 개설 때 이미 받는 7개 문항을 단순화했어요. FIT는 새 정보를 더 묻지 않고 이 결과를 개인화 기준으로 씁니다.</p></div>'+qs+'</div>'+
+  '<div class="card result"><h3>진단 결과</h3><div class="metric"><small>간이 점수</small><strong class="num">'+sc+' / 29</strong></div><div class="typebar">'+TYPES.map((t,i)=>'<div class="'+(i===ti?"on":"")+'">'+t.name+'</div>').join("")+'</div><div class="metric"><small>적합 상품 위험등급</small><div class="grades">'+[1,2,3,4,5,6].map(g=>'<span class="grade g'+g+(g<mg?' off':'')+'">'+g+'등급</span>').join("")+'</div></div><table class="t"><thead><tr><th>문항</th><th>개인화에 쓰는 방식</th></tr></thead><tbody>'+uses.map(u=>'<tr><td>'+u[0]+'</td><td>'+u[1]+'</td></tr>').join("")+'</tbody></table><div class="src">점수 구간: 10점 이하 안정형 · 11~15 안정추구형 · 16~20 위험중립형 · 21~25 적극투자형 · 26 이상 공격투자형 (공개 양식 기준 예시)</div><button class="btn pri" data-act="goto-mts">이 결과로 MTS 보기</button></div></div>';
+}
+
+/* ---------- dashboard ---------- */
+function dashHtml(){
+  const F=[["입문형",[100,46,12]],["탐색형",[100,71,28]],["적립형",[100,38,22]],["매매형",[100,83,64]]];
+  const AB=[["주문 화면 도달률",12,19],["7일 재방문율",41,48],["홈에서 3초 안에 첫 탭",54,71]];
+  const maxAB=100;
+  return '<div class="dash">'+
+  '<div class="card wide"><h2>이용 유형별 퍼널 · 검색 → 종목 상세 → 주문 화면</h2><p class="sub">검색 100명 기준 다음 단계 도달 인원. 입문형은 상세에서 주문으로 넘어가는 구간 이탈이 가장 커요.</p><div class="funnels">'+F.map((f,i)=>'<div class="fn'+(i===0?' hl':'')+'"><h4>'+f[0]+'</h4>'+["검색","상세","주문"].map((s,j)=>'<div class="fbar"><span>'+s+'</span><div class="t" title="'+f[0]+' '+s+' '+f[1][j]+'명"><i style="width:'+f[1][j]+'%"></i></div><span class="num">'+f[1][j]+'</span></div>').join("")+'</div>').join("")+'</div><div class="src">시연용 가상 수치</div></div>'+
+  '<div class="card"><h2>A/B 테스트 · 입문형 홈 구성안</h2><p class="sub">A 기본 홈과 B FIT 개인화 홈을 입문형 고객에게 2주간 나눠 적용한 결과예요.</p><div class="lg"><span style="--c:var(--ink-3)">A 기본 홈</span><span style="--c:var(--accent)">B FIT 개인화 홈</span></div><div class="ab">'+AB.map(r=>'<div class="abrow"><span class="l">'+r[0]+'</span><div class="abbar"><span>A</span><div class="t" title="A '+r[0]+' '+r[1]+'%"><i class="ia" style="width:'+(r[1]/maxAB*100)+'%"></i></div><span class="num">'+r[1]+'%</span></div><div class="abbar"><span>B</span><div class="t" title="B '+r[0]+' '+r[2]+'%"><i class="ib" style="width:'+(r[2]/maxAB*100)+'%"></i></div><span class="num">'+r[2]+'%</span></div></div>').join("")+'</div><div class="src">시연용 가상 수치 · 실제 운영 시 유의성 검정 후 확대 적용</div></div>'+
+  '<div class="card"><h2>가드레일 작동 현황 · 최근 2주</h2><table class="t"><thead><tr><th>항목</th><th style="text-align:right">건수·비율</th></tr></thead><tbody><tr><td>상품 이해 확인 카드 노출</td><td class="n num">1,284건</td></tr><tr><td>카드 확인 후 상세 화면 진입</td><td class="n num">71%</td></tr><tr><td>급상승 목록에서 제외된 노출</td><td class="n num">8,930건</td></tr><tr><td>투자성향 재진단 안내</td><td class="n num">96건</td></tr><tr><td>안내 후 재진단 완료</td><td class="n num">31%</td></tr><tr><td>추천 승인율</td><td class="n num">63%</td></tr></tbody></table><div class="src">시연용 가상 수치</div></div>'+
+  '<div class="card wide"><span class="aitag">AI 개선 리포트 · 예시 문안</span><h2>입문형 고객의 주문 전 이탈 개선안</h2><ol class="report"><li>입문형은 종목 상세에서 주문 화면으로 넘어가는 비율이 26%로 네 유형 중 가장 낮습니다(탐색형 39%).</li><li>상세 화면 체류 시간이 긴 고객일수록 이탈이 많아, 정보 부족보다 정보 과다가 원인일 가능성이 있습니다.</li><li>제안: 입문형의 상세 기본 깊이를 \'요약\'으로 유지하고, 주문 전 예상 수수료·필요 예수금을 한 카드로 합치는 구성안 C를 다음 A/B 테스트 대상으로 추천합니다.</li></ol><div class="src">생성형 AI는 집계된 수치로 문장만 작성하고, 화면 규칙 변경은 기획자가 결정합니다. 수치는 시연용 가상 데이터입니다.</div></div>'+
+  '</div>';
+}
+
+/* ---------- render & events ---------- */
+function render(){
+  ["diag","mts","dash"].forEach(t=>{$("#view-"+t).hidden=S.tab!==t;$("#tab-"+t).setAttribute("aria-selected",S.tab===t)});
+  const sc=$("#screen"),st=sc?sc.scrollTop:0;
+  if(S.tab==="diag")$("#view-diag").innerHTML=diagHtml();
+  if(S.tab==="mts"){$("#view-mts").innerHTML=mtsHtml();const n=$("#screen");if(n&&S.keepScroll)n.scrollTop=st;S.keepScroll=false}
+  if(S.tab==="dash")$("#view-dash").innerHTML=dashHtml();
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-tab],[data-act]");if(!b)return;
+  if(b.dataset.tab){S.tab=b.dataset.tab;render();return}
+  const a=b.dataset.act;
+  if(a!=="open"&&a!=="tap"&&!a.startsWith("tab-"))e.stopPropagation();
+  switch(a){
+    case"scen":loadScenario(b.dataset.s);break;
+    case"usage":S.usage=Object.assign({},USAGE_PRESETS[b.dataset.u]);S.pinned=[];S.snoozed=[];S.collapsed=false;note("이용 행동을 '"+USAGE_TYPES[b.dataset.u].name+"' 패턴으로 시뮬레이션");break;
+    case"open":{const id=b.dataset.id;bump("info");S.detail=id;S.screen="detail";
+      if(outOfRange(id)){S.views[id]=(S.views[id]||0)+1;
+        const ti=typeIdx();if(!S.acked[id]&&ti<=3&&!(ti===3&&P[id].g>1))S.sheet=id;}
+      break;}
+    case"tap":bump(b.dataset.cat);S.keepScroll=true;break;
+    case"ack":note("'"+P[S.sheet].name+"' 상품 이해 확인 카드 확인");S.acked[S.sheet]=true;S.sheet=null;break;
+    case"home":S.screen="home";S.detail=null;break;
+    case"depth":S.depthPick[S.detail]=+b.dataset.d;note("정보 깊이를 '"+DEPTH[+b.dataset.d]+"'로 직접 변경");S.keepScroll=true;break;
+    case"approve":S.pinned.push(b.dataset.m);note("추천 승인: '"+MODS[b.dataset.m].t+"' 홈 상단 고정");break;
+    case"decline":S.snoozed.push("pin:"+b.dataset.m);note("추천 거절: '"+MODS[b.dataset.m].t+"' (같은 제안 일정 기간 숨김)");break;
+    case"fold":S.collapsed=true;note("추천 승인: 자주 쓰지 않는 메뉴 접기");break;
+    case"nofold":S.snoozed.push("fold");note("추천 거절: 메뉴 접기");break;
+    case"unfold":S.collapsed=false;S.snoozed.push("fold");note("접힌 메뉴 다시 펼침");break;
+    case"rediag":note("투자성향 재진단으로 이동");S.mismatchOff=true;S.tab="diag";S.screen="home";break;
+    case"nomm":S.mismatchOff=true;note("재진단 안내 닫음");break;
+    case"goto-mts":S.tab="mts";S.screen="home";note("진단 결과 반영: "+TYPES[typeIdx()].name);break;
+    default:
+      if(a.startsWith("tab-")){const t=a.slice(4);if(b.dataset.cat)bump(b.dataset.cat);
+        if(t==="home"||t==="settings")S.screen=t;else S.screen="home";S.detail=null;}
+  }
+  render();
+});
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.name&&/^q\d$/.test(t.name)){S.ans[t.name]=+t.value;S.scen=null;render();return}
+  if(t.name==="lvl"){S.level=+t.value;note("개인화 수준 변경: "+["사용 안 함","투자성향만","이용 패턴 포함","적극 추천"][S.level]);render();return}
+  if(t.id==="alerts"){S.alertsManual=t.checked;note("급등 알림 "+(t.checked?"켬":"끔"));render()}
+});
+const hashTab=(location.hash||"").slice(1);
+loadScenario("A");S.log=[];note("시나리오 A 불러옴: 입문 + 안정추구형");
+if(["diag","mts","dash"].includes(hashTab))S.tab=hashTab;
+render();
+})();
+</script>
+</body>
+</html>
